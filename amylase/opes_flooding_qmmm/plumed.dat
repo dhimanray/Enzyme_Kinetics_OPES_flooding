@@ -1,0 +1,45 @@
+UNITS LENGTH=A
+
+d_nuc: DISTANCE ATOMS=3026,7700
+d_gly: DISTANCE ATOMS=7700,7699
+d_acid: DISTANCE ATOMS=7699,3607
+
+
+###### Walls #####################
+UPPER_WALLS ARG=d_nuc AT=+4.0 KAPPA=500.0 EXP=2 LABEL=uwall_d_nuc
+UPPER_WALLS ARG=d_acid AT=+4.0 KAPPA=500.0 EXP=2 LABEL=uwall_d_acid
+
+d_gly-wat: DISTANCE ATOMS=7699,26287
+UPPER_WALLS ARG=d_gly-wat AT=+4.0 KAPPA=500.0 EXP=2 LABEL=uwall_d_gly-wat
+
+#d_strHbond1: DISTANCE ATOMS=7704,4655
+#UPPER_WALLS ARG=d_strHbond1 AT=+2.5 KAPPA=1000.0 EXP=2 LABEL=uwall_d_strHbond1
+#d_strHbond2: DISTANCE ATOMS=7708,4654
+#UPPER_WALLS ARG=d_strHbond2 AT=+2.5 KAPPA=1000.0 EXP=2 LABEL=uwall_d_strHbond2
+##################################
+
+
+#metad: METAD ARG=d_gly SIGMA=0.1 HEIGHT=2.0 PACE=100 
+
+chi_exc: CUSTOM ARG=d_gly FUNC=step(x-1.8) PERIODIC=NO
+
+opes: OPES_METAD ...
+  ARG=d_gly,d_acid
+  PACE=100
+  ADAPTIVE_SIGMA_STRIDE=200
+  BARRIER=50
+  EXCLUDED_REGION=chi_exc
+  TEMP=300.0
+...
+
+COMMITTOR ...
+ ARG=d_gly
+ STRIDE=10
+ BASIN_LL1=3.3
+ BASIN_UL1=10.0
+... COMMITTOR
+
+
+PRINT ARG=d_gly,d_acid,opes.*,uwall_d_nuc.*,uwall_d_acid.*,uwall_d_gly-wat.* STRIDE=1 FILE=COLVAR
+
+FLUSH STRIDE=1

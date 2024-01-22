@@ -1,0 +1,158 @@
+@SET TOP amylase_ee.prmtop
+&GLOBAL
+  ECHO_INPUT
+  PRINT_LEVEL LOW
+  PROJECT REACT-NVT-EE-GPW
+  RUN_TYPE MD
+  SAVE_MEM TRUE
+&END GLOBAL
+
+&FORCE_EVAL
+  METHOD QMMM
+  STRESS_TENSOR ANALYTICAL
+  &DFT
+    CHARGE -2
+    MULTIPLICITY 1
+!    WFN_RESTART_FILE_NAME REACT-NVT-EE-GPW-RESTART.wfn
+    &MGRID
+      COMMENSURATE  #mandatory to use GEEP
+      CUTOFF 300
+    &END MGRID
+    &QS
+      METHOD GPW
+    &END QS
+    &SCF
+      EPS_SCF 1E-6
+      MAX_SCF 30
+      SCF_GUESS RESTART
+      &OT
+        MINIMIZER DIIS
+        PRECONDITIONER FULL_SINGLE_INVERSE
+        SAFE_DIIS TRUE
+      &END OT
+      &OUTER_SCF
+        EPS_SCF 1E-6
+        MAX_SCF 10
+      &END OUTER_SCF
+    &END SCF
+    &XC
+      &XC_FUNCTIONAL PBE
+      &END XC_FUNCTIONAL
+    &END XC
+  &END DFT
+  &MM
+    &FORCEFIELD
+      EI_SCALE14 0.8333
+      VDW_SCALE14 0.5000
+      PARMTYPE AMBER
+      PARM_FILE_NAME $TOP
+      &SPLINE
+        EMAX_SPLINE 1.0E8
+        RCUT_NB [angstrom] 10
+      &END SPLINE
+    &END FORCEFIELD
+    &POISSON
+      &EWALD
+        EWALD_TYPE SPME
+        ALPHA .40
+        GMAX 80
+      &END EWALD
+    &END POISSON
+  &END MM
+  &QMMM
+    ECOUPL GAUSS
+    USE_GEEP_LIB 6
+    @INCLUDE ./forceeval_qmmm.cp2k.inc
+  &END QMMM
+  &SUBSYS
+    &CELL
+      ABC 83.247300000000000	96.12510000000000	84.761200000000000
+    &END CELL
+    &TOPOLOGY
+      CONN_FILE_FORMAT AMBER
+      CONN_FILE_NAME $TOP
+      COORDINATE XYZ
+      COORD_FILE_NAME ./geom.xyz
+    &END TOPOLOGY
+
+    &VELOCITY
+       @INCLUDE "vel.xyz"
+    &END VELOCITY
+
+    &KIND NA+
+     ELEMENT Na
+    &END KIND
+    &KIND CL-
+     ELEMENT Cl
+    &END KIND
+    &KIND C
+      BASIS_SET DZVP-GTH-PBE
+      POTENTIAL GTH-PBE-q4
+    &END KIND
+    &KIND O
+      BASIS_SET DZVP-GTH-PBE
+      POTENTIAL GTH-PBE-q6
+    &END KIND
+    &KIND H
+      BASIS_SET DZVP-GTH-PBE
+      POTENTIAL GTH-PBE-q1
+    &END KIND
+  &END SUBSYS
+&END FORCE_EVAL
+
+
+&MOTION
+  &MD
+    &THERMOSTAT
+      &CSVR
+        TIMECON 100
+      &END CSVR
+      &DEFINE_REGION
+        MM_SUBSYS ATOMIC
+        QM_SUBSYS ATOMIC
+      &END DEFINE_REGION
+      TYPE CSVR 
+    &END THERMOSTAT
+    ENSEMBLE NVT
+    STEPS 100000
+    MAX_STEPS 2000000
+    TEMPERATURE 300.0
+    TIMESTEP 1.0
+  &END MD
+  &PRINT
+    &RESTART                                    ! This section controls the printing of restart files
+      &EACH
+        MD 1000
+      &END EACH
+      ADD_LAST NUMERIC
+      SPLIT_RESTART_FILE TRUE
+    &END RESTART
+    &RESTART_HISTORY
+      &EACH
+        MD 5000
+      &END EACH
+      ADD_LAST NUMERIC
+    &END RESTART_HISTORY
+    &TRAJECTORY                                 ! Controls the output of the trajectory
+      &EACH                                     ! New trajectory frame will be printed each 100 md steps
+        MD 100
+      &END EACH
+      ADD_LAST NUMERIC                          ! Last trajectory frame printed at the end of the calculation
+      FORMAT XYZ                                ! Format of the output trajectory is XYZ
+    &END TRAJECTORY
+  &END PRINT
+
+ &FREE_ENERGY
+    &METADYN
+      USE_PLUMED .TRUE.
+      PLUMED_INPUT_FILE ./plumed.dat
+    &END METADYN
+  &END FREE_ENERGY
+
+&END MOTION
+
+!&EXT_RESTART
+!  RESTART_FILE_NAME REACT-NVT-EE-${FRAMEID}-GPW-1.restart
+!!  RESTART_COUNTERS .FALSE.
+!!  RESTART_THERMOSTAT .FALSE.
+!&END
